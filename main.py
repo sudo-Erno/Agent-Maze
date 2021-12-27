@@ -7,20 +7,20 @@ import matplotlib.pyplot as plt
 rows = 5
 cols = 5
 final = rows - 1, cols - 1
-
-# Agent parameters
 reward_per_step = -0.04
 reward_reaching_final = 1.0
+
+# Agent parameters
 gamma = 0.95
 
 maze = Maze()
 
-environment = maze.create_maze(final, rows, cols)
-environment = maze.generate_blocks(2)
+environment = maze.create_maze(final, rows, cols, reward_per_step=reward_per_step, reward_reaching_final=reward_reaching_final)
+location_blocks = maze.generate_blocks(2)
 
-agent = Agent(reward_per_step, reward_reaching_final, gamma = gamma)
-agent.set_environmet(environment, final)
+agent = Agent(gamma = gamma)
+agent.set_environmet(environment, location_blocks, final)
 
-agent.move_throught_environment("right")
+arrived = agent.move_throught_environment("left")
 
-# print(agent.actual_coords_x, agent.actual_coords_y)
+# maze.plot_maze()
