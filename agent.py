@@ -1,8 +1,10 @@
 import numpy as np
+from random import randint
 
 class Agent:
 
     def __init__(self, x = 0, y = 0, lr=1e-3, gamma = 1e-4, reward_for_leaving_limits = -0.75):
+        # Up: 0, Right: 1, Down: 2, Left: 3
         self.actions = ["up", "right", "down", "left"]
 
         # Set actual coordinates of the agent
@@ -25,40 +27,71 @@ class Agent:
         self.environment = env
         self.location_blocks = location_blocks
 
+        self.QValues = np.zeros_like(env)
+        self.QValues[1][0] = 1.0
+
         # Save the coordinates of the exit
         self.final = final
 
-    def distance_to_objective(self, new_coordinates):
-        return ((new_coordinates[0] - self.final_coords_x)**2 + (new_coordinates[1] - self.final_coords_y)**2)**0.5
-
-    def move_throught_environment(self, action):
+    def instant_reward(self, new_coordinates):
+        return 1 / ((new_coordinates[0] - self.final[0])**2 + (new_coordinates[1] - self.final[1])**2)**0.5
+    
+    def move_throught_environment(self):
         """
-        Given an action, it will calculate the reward.
-
-        Returns True if it has arrived to destiny.   
+        Returns 1 if it has arrived to destiny, 0 if it has not arrived and -1 if it has left the maze.
         """
-        if action == "up":
-            self.actual_coords_y -= 1
-        elif action == "right":
-            self.actual_coords_x += 1
-        elif action == "down":
-            self.actual_coords_y += 1
-        elif action == "left":
-            self.actual_coords_x -= 1
+
+        # Check the values on the QValue table for next action
+        next_states = [
+            self.QValues[self.actual_coords_x][self.actual_coords_y - 1], # UP
+            self.QValues[self.actual_coords_x + 1][self.actual_coords_y], # RIGHT
+            self.QValues[self.actual_coords_x][self.actual_coords_y + 1], # DOWN
+            self.QValues[self.actual_coords_x - 1][self.actual_coords_y] # LEFT
+        ]
         
+        # Get the max value and index of it
+        max_value = max(next_states)
+        max_index = next_states.index(max_value)
+
+        # Executes movements based on the values of the states
+        future_state = [self.actual_coords_x, self.actual_coords_y]
+
+        if max_index == 0:
+            future_state[1] -= 1
+        
+        elif max_index == 1:
+            future_state[0] += 1
+        
+        elif max_index == 2:
+            future_state[1] += 1
+        
+        elif max_index == 3:
+            future_state[0] -= 1
+
+        # Get the new reward value
+        self.reward += self.instant_reward((self.actual_coords_x, self.actual_coords_y))
+
         # Check if its outside the limits
-        if self.actual_coords_x < 0 or self.actual_coords_x > self.final[0]:
+        if future_state[0] < 0 or future_state[0] > self.final[0]:
             self.reward += self.reward_for_leaving_limits
+            return -1
         
-        elif self.actual_coords_y < 0 or self.actual_coords_y > self.final[1]:
+        elif future_state[1] < 0 or future_state[1] > self.final[1]:
             self.reward += self.reward_for_leaving_limits
+            return -1
         
         # Check if it has arrive at the exit
-        if self.actual_coords_x == self.final[0] and self.actual_coords_y == self.final[1]:
+        if future_state[0] == self.final[0] and future_state[1] == self.final[1]:
             self.reward += self.reward_reaching_final
-            return True
+            return 1
 
-        self.reward += self.environment[self.actual_coords_x, self.actual_coords_y]
+        self.reward += self.environment[future_state[0], future_state[1]]
 
-        # print(self.reward)
-        return False
+        # Update Q-Value
+        self.QValues[self.actual_coords_x, self.actual_coords_y] = self.reward + self.gamma * self.QValues[future_state[0], future_state[1]]
+
+        # Update the coordinates
+        self.actual_coords_x = future_state[0]
+        self.actual_coords_y = future_state[1]
+        
+        return 0

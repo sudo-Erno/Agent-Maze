@@ -1,1 +1,1 @@
-maze)
+self.actual_coords_x, self.actual_coords_y
