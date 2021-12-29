@@ -10,6 +10,7 @@ class Maze:
         Given the size and the initial and final coordinates, it will generate a maze.
         """
         self.maze = np.ones((rows, cols)) * reward_per_step
+
         self.location_blocks = [] # Save the coordinates of the blocks at the maze
 
         self.initial = initial
