@@ -36,6 +36,21 @@ class Agent:
     def instant_reward(self, new_coordinates):
         return 1 / ((new_coordinates[0] - self.final[0])**2 + (new_coordinates[1] - self.final[1])**2)**0.5
     
+    def available_movements(self):
+        movements = ["up", "right", "down", "left"]
+
+        if self.actual_coords_x - 1 < 0:
+            movements.remove("left")
+        elif self.actual_coords_x + 1 > self.final[0]:
+            movements.remove("right")
+        
+        if self.actual_coords_y - 1 < 0:
+            movements.remove("up")
+        elif self.actual_coords_y + 1 > self.final[1]:
+            movements.remove("down")
+
+        return movements
+        
     def move_throught_environment(self):
         """
         Returns 1 if it has arrived to destiny, 0 if it has not arrived and -1 if it has left the maze.
