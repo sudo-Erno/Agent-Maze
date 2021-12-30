@@ -28,7 +28,10 @@ class Agent:
         self.location_blocks = location_blocks
 
         self.QValues = np.zeros_like(env)
-        self.QValues[1][0] = 1.0
+        self.QTable = np.zeros((self.environment.size, len(self.actions)))
+        # self.QValues[1][0] = 1.0
+
+        print(self.QTable.shape)
 
         # Save the coordinates of the exit
         self.final = final
@@ -36,7 +39,7 @@ class Agent:
     def instant_reward(self, new_coordinates):
         return 1 / ((new_coordinates[0] - self.final[0])**2 + (new_coordinates[1] - self.final[1])**2)**0.5
     
-    def move_throught_environment(self):
+    def move_throught_environment(self): # TODO: Correct when the agent leaves the maze
         """
         Returns 1 if it has arrived to destiny, 0 if it has not arrived and -1 if it has left the maze.
         """
@@ -93,5 +96,8 @@ class Agent:
         # Update the coordinates
         self.actual_coords_x = future_state[0]
         self.actual_coords_y = future_state[1]
+
+        print(self.QValues)
+        print("\t\t")
         
         return 0
