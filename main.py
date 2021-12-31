@@ -21,8 +21,10 @@ location_blocks = maze.generate_blocks(2)
 agent = Agent(x = 0, y = 0, gamma = gamma)
 agent.set_environmet(environment, location_blocks, final)
 
-for i in range(10):
+position_state = False
+
+while position_state == False:
     position_state = agent.move_throught_environment()
-# print(f"{position_state = }")
+    # print(f"{position_state = }")
 
 # maze.plot_maze()

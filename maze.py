@@ -13,6 +13,7 @@ class Maze:
 
         self.location_blocks = [] # Save the coordinates of the blocks at the maze
 
+        # Save the coordinates of the initial and final position
         self.initial = initial
         self.final = final
 

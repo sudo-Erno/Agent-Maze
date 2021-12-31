@@ -7,6 +7,10 @@ class Agent:
         # Up: 0, Right: 1, Down: 2, Left: 3
         self.actions = ["up", "right", "down", "left"]
 
+        # Set initial coordinates
+        self.initial_x = x
+        self.initial_y = y
+
         # Set actual coordinates of the agent
         self.actual_coords_x = x
         self.actual_coords_y = y
@@ -26,54 +30,78 @@ class Agent:
         # Save the Maze
         self.environment = env
         self.location_blocks = location_blocks
-
-        self.QValues = np.zeros_like(env)
-        self.QTable = np.zeros((self.environment.size, len(self.actions)))
-        # self.QValues[1][0] = 1.0
-
-        print(self.QTable.shape)
-
+        
         # Save the coordinates of the exit
         self.final = final
 
+        self.QValues = np.zeros_like(env)
+
     def instant_reward(self, new_coordinates):
-        return 1 / ((new_coordinates[0] - self.final[0])**2 + (new_coordinates[1] - self.final[1])**2)**0.5
+        d = ((new_coordinates[0] - self.final[0])**2 + (new_coordinates[1] - self.final[1])**2)**0.5
+        if d != 0:
+            return 1 / d
+        else:
+            return 9
     
-    def move_throught_environment(self): # TODO: Correct when the agent leaves the maze
+    def available_movements(self):
+        movements = ["up", "right", "down", "left"]
+
+        if self.actual_coords_x - 1 < 0:
+            movements.remove("left")
+        elif self.actual_coords_x + 1 > self.final[0]:
+            movements.remove("right")
+        
+        if self.actual_coords_y - 1 < 0:
+            movements.remove("up")
+        elif self.actual_coords_y + 1 > self.final[1]:
+            movements.remove("down")
+
+        return movements
+    
+    def plot_qtable(self):
+        q_table = np.array(self.QValues, dtype=np.str)
+        q_table[self.final] = "F"
+        q_table[self.initial_y][self.initial_x] = "A"
+        print(q_table)
+
+    def move_throught_environment(self):
         """
         Returns 1 if it has arrived to destiny, 0 if it has not arrived and -1 if it has left the maze.
         """
-
+        get_to_final = False
         # Check the values on the QValue table for next action
-        next_states = [
-            self.QValues[self.actual_coords_x][self.actual_coords_y - 1], # UP
-            self.QValues[self.actual_coords_x + 1][self.actual_coords_y], # RIGHT
-            self.QValues[self.actual_coords_x][self.actual_coords_y + 1], # DOWN
-            self.QValues[self.actual_coords_x - 1][self.actual_coords_y] # LEFT
-        ]
+        next_states = []
+        next_states_values = []
         
-        # Get the max value and index of it
-        max_value = max(next_states)
-        max_index = next_states.index(max_value)
+        movements = self.available_movements()
 
-        # Executes movements based on the values of the states
-        future_state = [self.actual_coords_x, self.actual_coords_y]
-
-        if max_index == 0:
-            future_state[1] -= 1
+        # Save the coordinates and values of the posible next states
+        if "up" in movements:
+            next_states_values.append(self.QValues[self.actual_coords_x, self.actual_coords_y - 1])
+            next_states.append([self.actual_coords_x, self.actual_coords_y - 1])
         
-        elif max_index == 1:
-            future_state[0] += 1
+        if "right" in movements:
+            next_states_values.append(self.QValues[self.actual_coords_x + 1, self.actual_coords_y])
+            next_states.append([self.actual_coords_x + 1, self.actual_coords_y])
         
-        elif max_index == 2:
-            future_state[1] += 1
+        if "down" in movements:
+            next_states_values.append(self.QValues[self.actual_coords_x, self.actual_coords_y + 1])
+            next_states.append([self.actual_coords_x, self.actual_coords_y + 1])
         
-        elif max_index == 3:
-            future_state[0] -= 1
+        if "left" in movements:
+            next_states_values.append(self.QValues[self.actual_coords_x - 1, self.actual_coords_y])
+            next_states.append([self.actual_coords_x - 1, self.actual_coords_y])
 
-        # Get the new reward value
-        self.reward += self.instant_reward((self.actual_coords_x, self.actual_coords_y))
+        # Getting the state with the highest value
+        max_value_states = max(next_states_values)
 
+        # Getting the index of the state with the highest value
+        max_value_index = max(next_states)
+
+        # Get the reward for the next state
+        self.reward += self.instant_reward((max_value_index[0], max_value_index[1]))
+
+        """
         # Check if its outside the limits
         if future_state[0] < 0 or future_state[0] > self.final[0]:
             self.reward += self.reward_for_leaving_limits
@@ -82,22 +110,23 @@ class Agent:
         elif future_state[1] < 0 or future_state[1] > self.final[1]:
             self.reward += self.reward_for_leaving_limits
             return -1
-        
+        """
+
         # Check if it has arrive at the exit
-        if future_state[0] == self.final[0] and future_state[1] == self.final[1]:
-            self.reward += self.reward_reaching_final
-            return 1
+        if max_value_index[0] == self.final[0] and max_value_index[1] == self.final[1]:
+            self.reward += 1.0
+            get_to_final = True
 
-        self.reward += self.environment[future_state[0], future_state[1]]
+        # Bellman equation
+        self.QValues[self.actual_coords_y][self.actual_coords_x] = self.reward + self.gamma * max_value_states
 
-        # Update Q-Value
-        self.QValues[self.actual_coords_x, self.actual_coords_y] = self.reward + self.gamma * self.QValues[future_state[0], future_state[1]]
+        # Update position of the agent
+        self.actual_coords_y, self.actual_coords_x = max_value_index
 
-        # Update the coordinates
-        self.actual_coords_x = future_state[0]
-        self.actual_coords_y = future_state[1]
-
+        print("\t\t")
         print(self.QValues)
         print("\t\t")
         
-        return 0
+        # self.plot_qtable()
+
+        return get_to_final
