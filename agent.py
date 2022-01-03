@@ -1,5 +1,5 @@
 import numpy as np
-from random import randint
+from random import choice
 
 class Agent:
 
@@ -58,11 +58,39 @@ class Agent:
 
         return movements
     
+    def is_inside_maze(self, state):
+        if state[0] < 0 or state[0] > len(self.environment[0]) - 1:
+            return False
+        if state[1] < 0 or state[1] > len(self.environment[1]) - 1:
+            return False
+        return True
+
     def plot_qtable(self):
         q_table = np.array(self.QValues, dtype=np.str)
         q_table[self.final] = "F"
         q_table[self.initial_y][self.initial_x] = "A"
         print(q_table)
+
+    def choose_action(self, next_states, min_distance_index, b_prob=70, s_prob=10):
+        """
+        Returns action number (0: UP, 1: RIGHT, 2: DOWN, 3: LEFT)
+        """
+        states_possibilities = []
+
+        for i in range(len(next_states)):
+            
+            state = list(self.actions.keys())
+            state = state[i]
+
+            if i == min_distance_index:
+                for j in range(b_prob):
+                    states_possibilities.append(state)
+            
+            else:
+                for j in range(s_prob):
+                    states_possibilities.append(state)
+
+        return choice(states_possibilities)
 
     def move_throught_environment(self):
         """
@@ -72,10 +100,10 @@ class Agent:
         
         # Check the values on the QValue table for next action
         next_states = [
-            [self.actual_coords_x, self.actual_coords_y - 1], # UP
-            [self.actual_coords_x + 1, self.actual_coords_y], # RIGHT
-            [self.actual_coords_x, self.actual_coords_y + 1], # DOWN
-            [self.actual_coords_x - 1, self.actual_coords_y] # LEFT
+            [self.actual_coords_y - 1, self.actual_coords_x], # UP
+            [self.actual_coords_y, self.actual_coords_x + 1], # RIGHT
+            [self.actual_coords_y + 1, self.actual_coords_x], # DOWN
+            [self.actual_coords_y, self.actual_coords_x - 1] # LEFT
         ]
 
         # Calculate distances
@@ -86,20 +114,15 @@ class Agent:
         
         min_distance_index = distances.index(min(distances))
 
-        states_possibilities = []
+        next_state = self.choose_action(next_states, min_distance_index, 70, 10)
 
-        for i in range(len(next_states)):
-            state = list(self.actions.values())
-            state = state[i]
+        new_state = next_states[next_state]
 
-            if i == min_distance_index:
-                for j in range(70):
-                    states_possibilities.append(state)
-            else:
-                for j in range(10):
-                    states_possibilities.append(state)
+        inside_maze = self.is_inside_maze(new_state)
+        
+        if not inside_maze:
+            pass
 
-        print(states_possibilities)
 
         # print("\t\t")
         # print(self.QValues)
