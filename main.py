@@ -23,8 +23,6 @@ agent.set_environmet(environment, location_blocks, final)
 
 position_state = False
 
-while position_state == False:
-    position_state = agent.move_throught_environment()
-    # print(f"{position_state = }")
+position_state = agent.move_throught_environment()
 
 # maze.plot_maze()

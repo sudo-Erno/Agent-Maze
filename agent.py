@@ -5,7 +5,7 @@ class Agent:
 
     def __init__(self, x = 0, y = 0, lr=1e-3, gamma = 1e-4, reward_for_leaving_limits = -0.75):
         # Up: 0, Right: 1, Down: 2, Left: 3
-        self.actions = ["up", "right", "down", "left"]
+        self.actions = {0: "up", 1: "right", 2: "down", 3: "left"}
 
         # Set initial coordinates
         self.initial_x = x
@@ -39,9 +39,9 @@ class Agent:
     def instant_reward(self, new_coordinates):
         d = ((new_coordinates[0] - self.final[0])**2 + (new_coordinates[1] - self.final[1])**2)**0.5
         if d != 0:
-            return 1 / d
+            return 1 / d, d
         else:
-            return 9
+            return 9, d
     
     def available_movements(self):
         movements = ["up", "right", "down", "left"]
@@ -69,63 +69,41 @@ class Agent:
         Returns 1 if it has arrived to destiny, 0 if it has not arrived and -1 if it has left the maze.
         """
         get_to_final = False
+        
         # Check the values on the QValue table for next action
-        next_states = []
-        next_states_values = []
+        next_states = [
+            [self.actual_coords_x, self.actual_coords_y - 1], # UP
+            [self.actual_coords_x + 1, self.actual_coords_y], # RIGHT
+            [self.actual_coords_x, self.actual_coords_y + 1], # DOWN
+            [self.actual_coords_x - 1, self.actual_coords_y] # LEFT
+        ]
+
+        # Calculate distances
+        distances = []
+        for state in next_states:
+            _, dis = self.instant_reward(state)
+            distances.append(dis)
         
-        movements = self.available_movements()
+        min_distance_index = distances.index(min(distances))
 
-        # Save the coordinates and values of the posible next states
-        if "up" in movements:
-            next_states_values.append(self.QValues[self.actual_coords_x, self.actual_coords_y - 1])
-            next_states.append([self.actual_coords_x, self.actual_coords_y - 1])
-        
-        if "right" in movements:
-            next_states_values.append(self.QValues[self.actual_coords_x + 1, self.actual_coords_y])
-            next_states.append([self.actual_coords_x + 1, self.actual_coords_y])
-        
-        if "down" in movements:
-            next_states_values.append(self.QValues[self.actual_coords_x, self.actual_coords_y + 1])
-            next_states.append([self.actual_coords_x, self.actual_coords_y + 1])
-        
-        if "left" in movements:
-            next_states_values.append(self.QValues[self.actual_coords_x - 1, self.actual_coords_y])
-            next_states.append([self.actual_coords_x - 1, self.actual_coords_y])
+        states_possibilities = []
 
-        # Getting the state with the highest value
-        max_value_states = max(next_states_values)
+        for i in range(len(next_states)):
+            state = list(self.actions.values())
+            state = state[i]
 
-        # Getting the index of the state with the highest value
-        max_value_index = max(next_states)
+            if i == min_distance_index:
+                for j in range(70):
+                    states_possibilities.append(state)
+            else:
+                for j in range(10):
+                    states_possibilities.append(state)
 
-        # Get the reward for the next state
-        self.reward += self.instant_reward((max_value_index[0], max_value_index[1]))
+        print(states_possibilities)
 
-        """
-        # Check if its outside the limits
-        if future_state[0] < 0 or future_state[0] > self.final[0]:
-            self.reward += self.reward_for_leaving_limits
-            return -1
-        
-        elif future_state[1] < 0 or future_state[1] > self.final[1]:
-            self.reward += self.reward_for_leaving_limits
-            return -1
-        """
-
-        # Check if it has arrive at the exit
-        if max_value_index[0] == self.final[0] and max_value_index[1] == self.final[1]:
-            self.reward += 1.0
-            get_to_final = True
-
-        # Bellman equation
-        self.QValues[self.actual_coords_y][self.actual_coords_x] = self.reward + self.gamma * max_value_states
-
-        # Update position of the agent
-        self.actual_coords_y, self.actual_coords_x = max_value_index
-
-        print("\t\t")
-        print(self.QValues)
-        print("\t\t")
+        # print("\t\t")
+        # print(self.QValues)
+        # print("\t\t")
         
         # self.plot_qtable()
 
