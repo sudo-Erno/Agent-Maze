@@ -1,5 +1,4 @@
 from random import choice
+import random
 
-mylist = ["A"] * 3 + ["B"] * 4 + ["C"] * 3
-
-print(choice(mylist))
+print(random.randint(0, 3))
