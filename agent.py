@@ -1,8 +1,6 @@
 import numpy as np
 import random
 
-from numpy.lib.function_base import select
-
 class Agent:
 
     def __init__(self, x = 0, y = 0, lr = 1e-3, gamma = 1e-4, epsilon = 0.9, reward_for_leaving_limits = -0.75):
@@ -47,7 +45,7 @@ class Agent:
         self.final = final
 
         self.QValues = np.zeros((len(self.actions), self.environment.shape[0], self.environment.shape[1]))
-        self.Q_action_state = self.QValues
+        self.state_values = np.zeros_like(self.environment)
 
     def instant_reward(self, new_coordinates):
         d = ((new_coordinates[0] - self.final[0])**2 + (new_coordinates[1] - self.final[1])**2)**0.5
@@ -65,19 +63,22 @@ class Agent:
 
         return True
 
-    def action_probability(self, next_states, min_distance_index, b_prob=0.7, s_prob=0.1, epsilon=0.7):
+    def action_probability(self, next_states, min_distance_index, b_prob=0.7, epsilon=0.7):
         """
         Returns a list with the probability of each action
         """
         states_possibilities = []
+        
+        s_prob = 1 / (len(next_states) - 1)
+        s_prob /= (len(next_states) - 1)
 
         if epsilon < self.epsilon:
-            # Give the majority of the probability of moving to the state where the distance to objective is shorter
+            # More probability of moving to the state where the distance to objective is shorter
 
             for i in range(len(next_states)):
                 
-                state = list(self.actions.keys())
-                state = state[i]
+                # state = list(self.actions.keys())
+                # state = state[i]
 
                 if i == min_distance_index:
                     states_possibilities.append(b_prob)
@@ -126,8 +127,16 @@ class Agent:
                         else:
                             self.QValues[k, i, j] = probabilities[k] * self.reward_for_leaving_limits
 
-    def update_state_actions_values(self, next_states, probabilities):
-        
+    def update_state_value(self, probabilities):
+        for i in range(self.environment.shape[0]):
+            for j in range(self.environment.shape[1]):
+                for h in range(len(probabilities)):
+                    self.state_values[i, j] = probabilities[h] * self.QValues[h, i, j]
+
+    def take_action(self, next_states, probabilities):
+        """
+        Takes an action based on its probabilty
+        """
         max_probability_action_index = 0
 
         if len(set(probabilities)) != 1:
@@ -170,16 +179,22 @@ class Agent:
 
         self.update_state_values(next_states, actions_probabilities)
 
-        self.is_first_action = False
-
-        self.update_state_actions_values(next_states, actions_probabilities)
+        # self.update_state_value(actions_probabilities)
+        
+        self.take_action(next_states, actions_probabilities)
 
         # Check if it has arrived to the end
         if self.actual_coords_y == self.final[0] and self.actual_coords_x == self.final[1]:
             get_to_final = True
-        
-        print("\tQ-VALUES\t")
-        print(self.QValues)
-        print("\t\t")
 
+        # print("\tQ-VALUES\t")
+        # print(self.QValues)
+        # print("\t\t")
+
+        print("\tSTATE-VALUES\t")
+        print(self.state_values)
+        print("\t\t")
+        
+        self.is_first_action = False
+        
         return get_to_final
