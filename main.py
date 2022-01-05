@@ -26,7 +26,7 @@ agent.set_environmet(environment, location_blocks, final)
 
 position_state = False
 
-# for i in range(5):
+# for i in range(2):
 #     position_state = agent.move_throught_environment()
 
 for i in range(5):

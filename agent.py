@@ -135,6 +135,13 @@ class Agent:
         else:
             max_probability_action_index = random.randint(0, 3)
         
+        inside_maze = self.is_inside_maze(next_states[max_probability_action_index])
+
+        # Check if the random choosen state is inside the maze since it will throw an error
+        while inside_maze == False:
+            max_probability_action_index = random.randint(0, 3)
+            inside_maze = self.is_inside_maze(next_states[max_probability_action_index])
+        
         # Moves to the state which it's values is the max of all options
         self.actual_coords_y = next_states[max_probability_action_index][0]
         self.actual_coords_x = next_states[max_probability_action_index][1]
