@@ -12,7 +12,7 @@ reward_reaching_final = 1.0
 
 # Agent parameters
 gamma = 0.95
-epsilon = 0.7
+epsilon = 0.1
 x0 = 0
 y0 = 0
 

@@ -1,6 +1,8 @@
 from random import choice
 import random
+import numpy as np
 
-mylist = [0.25] * 5
+env = np.zeros((5, 3))
 
-print(len(list(mylist)) == 1)
+for i in range(env.shape[0] - 1):
+    print(f"{i = }")

@@ -1,6 +1,8 @@
 import numpy as np
 import random
 
+from numpy.lib.function_base import select
+
 class Agent:
 
     def __init__(self, x = 0, y = 0, lr = 1e-3, gamma = 1e-4, epsilon = 0.9, reward_for_leaving_limits = -0.75):
@@ -63,7 +65,7 @@ class Agent:
 
         return True
 
-    def action_probability(self, next_states, min_distance_index, b_prob=70, s_prob=10, epsilon=0.7):
+    def action_probability(self, next_states, min_distance_index, b_prob=0.7, s_prob=0.1, epsilon=0.7):
         """
         Returns a list with the probability of each action
         """
@@ -78,10 +80,10 @@ class Agent:
                 state = state[i]
 
                 if i == min_distance_index:
-                    states_possibilities.append(b_prob / 100)
+                    states_possibilities.append(b_prob)
                 
                 else:
-                    states_possibilities.append(s_prob / 100)
+                    states_possibilities.append(s_prob)
         else:
             for i in range(len(next_states)):
                 states_possibilities.append(1 / len(next_states))
@@ -106,20 +108,23 @@ class Agent:
 
         if not self.is_first_action:
             
-            for i in range(len(self.past_states[:-1])):
-                
-                row = self.past_states[i][0]
-                col = self.past_states[i][1]
+            for i in range(self.environment.shape[0]):
+                for j in range(self.environment.shape[1]):
+                    
+                    posibles_next_states = [
+                        [i - 1, j], # UP
+                        [i, j + 1], # RIGHT
+                        [i + 1, j], # DOWN
+                        [i, j - 1], # LEFT
+                    ]
 
-                next_row = self.past_states[i+1][0]
-                next_col = self.past_states[i+1][1]
+                    for k in range(len(posibles_next_states)):
+                        next_state = posibles_next_states[k]
 
-                for i in range(len(list(self.actions.keys()))):
-                
-                    if self.is_inside_maze([row, col]):
-                        self.QValues[i, row, col] = probabilities[i] * (self.environment[next_row, next_col] + self.gamma * self.QValues[i, next_row, next_col])
-                    else:
-                        self.QValues[i, row, col] = probabilities[i] * self.reward_for_leaving_limits
+                        if self.is_inside_maze(next_state):
+                            self.QValues[k, i, j] = probabilities[k] * (self.environment[next_state[0], next_state[1]] + self.gamma * self.QValues[k, next_state[0], next_state[1]])
+                        else:
+                            self.QValues[k, i, j] = probabilities[k] * self.reward_for_leaving_limits
 
     def update_state_actions_values(self, next_states, probabilities):
         
