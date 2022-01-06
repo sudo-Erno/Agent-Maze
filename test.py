@@ -1,4 +1,5 @@
 from random import choice
 import random
 
-print(random.randint(0, 3))
+for i in range(10, 0, -1):
+    print(f"{i = }")
