@@ -45,6 +45,22 @@ class Agent:
 
         self.state_values = np.zeros((self.environment.shape[0], self.environment.shape[1]))
 
+        # For plotting the path of the agent
+        self.path = np.array(self.state_values, dtype=np.str)
+
+        self.create_display_map()
+
+    def create_display_map(self):
+        for i in range(self.path.shape[0]):
+            for j in range(self.path.shape[1]):
+                self.path[i][j] = "x"
+                
+                if i == self.actual_coords_y and j == self.actual_coords_x:
+                    self.path[i][j] = "A"
+                
+                if [i, j] == self.final:
+                    self.path[i][j] = "F"
+
     def instant_reward(self, new_coordinates):
         d = ((new_coordinates[0] - self.final[0])**2 + (new_coordinates[1] - self.final[1])**2)**0.5
         if d != 0:
@@ -67,11 +83,8 @@ class Agent:
 
         return False
 
-    def plot_qtable(self):
-        q_table = np.array(self.state_values, dtype=np.str)
-        q_table[self.final] = "F"
-        q_table[self.initial_y][self.initial_x] = "A"
-        print(q_table)
+    def agent_path(self):
+        self.path[self.initial_coords] = "A"
 
     def choose_action(self, next_states, min_distance_index, exploration_prob, b_prob=0.7):
         """
@@ -103,7 +116,11 @@ class Agent:
 
         return next_action_index
     
-    def update_state_values(self):
+    def update_state_values(self, in_maze):
+        """
+        Updates the value of each state.
+        The in_maze boolean depends if the last state is inside the the maze.
+        """
         rew = 0
         number_states = len(self.states_history) - 1
 
@@ -111,15 +128,22 @@ class Agent:
             state_row, state_col = self.states_history[i]
 
             # Check if its outside the maze
-            if not self.is_inside_maze((state_row, state_col)):
+            if not in_maze:
                 rew += self.gamma ** (number_states - i) * self.reward_for_leaving_limits
+                in_maze = True
             else:
                 rew += self.gamma ** (number_states - i) * self.environment[state_row][state_col]
 
         self.state_values[self.initial_coords[0], self.initial_coords[1]] = rew
 
-    def change_state(self, next_states, exploration_prob):
+    def change_state(self, exploration_prob):
         next_states_values = []
+        next_states = [
+            [self.initial_coords[0] - 1, self.initial_coords[1]], # UP
+            [self.initial_coords[0], self.initial_coords[1] + 1], # RIGHT
+            [self.initial_coords[0] + 1, self.initial_coords[1]], # DOWN
+            [self.initial_coords[0], self.initial_coords[1] - 1] # LEFT
+        ]
 
         for state in next_states:
             row, col = state
@@ -138,50 +162,72 @@ class Agent:
         
         return next_states[index]
         
-    def move_throught_environment(self):
+    def move_throught_environment(self, iterations = 1):
         """
         Returns 1 if it has arrived to destiny, 0 if it has not arrived and -1 if it has left the maze.
         """
+        
         # -1 --> Left the maze
         # 0 --> Is inside maze
         # 1 --> Reached objective
-        game_state = 0
         
-        # Check the values on the QValue table for next action
-        next_states_available = [
-            [self.actual_coords_y - 1, self.actual_coords_x], # UP
-            [self.actual_coords_y, self.actual_coords_x + 1], # RIGHT
-            [self.actual_coords_y + 1, self.actual_coords_x], # DOWN
-            [self.actual_coords_y, self.actual_coords_x - 1] # LEFT
-        ]
-
-        # Calculate distances
-        distances = []
-
-        for state in next_states_available:
-            _, dis = self.instant_reward(state)
-            distances.append(dis)
-
-        next_action_index = self.choose_action(next_states_available, distances.index(min(distances)), random.random())
-
-        next_states = next_states_available[next_action_index]
-
-        # Save the current state in history list
-        self.states_history.append([self.actual_coords_y, self.actual_coords_x])
-
-        # Update position
-        self.actual_coords_y = next_states[0]
-        self.actual_coords_x = next_states[1]
-
-        if not self.is_inside_maze((self.actual_coords_y, self.actual_coords_x)) or self.arrived_final((self.actual_coords_y, self.actual_coords_x)):
-            self.update_state_values()
+        for i in range(iterations):
+            game_state = 0
+            while game_state == 0:
             
-            # Select next state which has the biggest state value with some probability
-            new_state = self.change_state(next_states_available, random.random())
-            
-            self.initial_coords = new_state[0], new_state[1]
-            
-            self.actual_coords_y = new_state[0]
-            self.actual_coords_x = new_state[1]
+                # Check the values on the QValue table for next action
+                next_states_available = [
+                    [self.actual_coords_y - 1, self.actual_coords_x], # UP
+                    [self.actual_coords_y, self.actual_coords_x + 1], # RIGHT
+                    [self.actual_coords_y + 1, self.actual_coords_x], # DOWN
+                    [self.actual_coords_y, self.actual_coords_x - 1] # LEFT
+                ]
 
-        return game_state, self.state_values
+                # Save the current state in history list
+                self.states_history.append([self.actual_coords_y, self.actual_coords_x])
+                
+                # Calculate distances
+                distances = []
+
+                for state in next_states_available:
+                    _, dis = self.instant_reward(state)
+                    distances.append(dis)
+
+                next_action_index = self.choose_action(next_states_available, distances.index(min(distances)), random.random())
+
+                next_state = next_states_available[next_action_index]
+
+                if not self.is_inside_maze(next_state):
+                    
+                    self.update_state_values(False)
+
+                    self.states_history = []
+                    
+                    game_state = -1
+                
+                elif game_state == 0:
+                    # Update position
+                    self.actual_coords_y = next_state[0]
+                    self.actual_coords_x = next_state[1]
+
+                    if self.arrived_final((self.actual_coords_y, self.actual_coords_x)):
+                        self.update_state_values(True)
+                        
+                        # Select next state which has the biggest state value with some probability
+                        new_state = self.change_state(random.random())
+
+                        while not self.is_inside_maze(new_state):
+                            new_state = self.change_state(random.random())
+
+                            self.initial_coords = new_state[0], new_state[1]
+                        
+                        self.actual_coords_y = new_state[0]
+                        self.actual_coords_x = new_state[1]
+
+                        game_state = 1
+
+                        self.states_history = []
+
+                        self.agent_path()
+
+        return game_state, self.state_values, self.path
