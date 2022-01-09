@@ -12,7 +12,7 @@ reward_reaching_final = 1.0
 
 # Agent parameters
 gamma = 0.8
-epsilon = 0.9
+epsilon = 0.8
 
 maze = Maze()
 
@@ -25,7 +25,7 @@ agent.set_environmet(environment, location_blocks, final)
 game_state = False
 state_actions = 0
 
-game_state, state_actions, path = agent.move_throught_environment(800)
+game_state, state_actions, path = agent.move_throught_environment(10)
 
 print("\n")
 print(path)

@@ -5,7 +5,7 @@ w = 1
 
 class Agent:
 
-    def __init__(self, x = 0, y = 0, lr = 1e-3, gamma = 0.8, epsilon = 0.9, reward_for_leaving_limits = -0.75):
+    def __init__(self, x = 0, y = 0, lr = 1e-3, gamma = 0.8, epsilon = 0.9, reward_for_leaving_limits = -0.75, reward_per_movement = -0.04):
         # Up: 0, Right: 1, Down: 2, Left: 3
         self.actions = {0: "up", 1: "right", 2: "down", 3: "left"}
 
@@ -29,7 +29,9 @@ class Agent:
         self.learning_rate = lr
 
         self.reward_for_leaving_limits = reward_for_leaving_limits
+        self.reward_per_movement = reward_per_movement
 
+        self.states_and_probabilities = []
     
     def set_position(self, y, x):
         self.actual_coords_y = y
@@ -108,6 +110,7 @@ class Agent:
             states_possibilities = [rnd_prob] * len(next_states)
         
         next_action_index = 0
+        self.states_and_probabilities.append([[next_states, states_possibilities]])
 
         if len(set(states_possibilities)) == 1:
             next_action_index = random.randint(0, len(self.actions.keys()) - 1)
@@ -116,24 +119,28 @@ class Agent:
 
         return next_action_index
     
-    def update_state_values(self, in_maze):
+    def update_state_values(self):
         """
         Updates the value of each state.
-        The in_maze boolean depends if the last state is inside the the maze.
         """
         rew = 0
-        number_states = len(self.states_history) - 1
+        number_of_states = len(self.states_and_probabilities[0]) - 1
 
-        for i in range(number_states, -1, -1):
-            state_row, state_col = self.states_history[i]
+        for i in range(number_of_states, -1, -1):
+            states_and_probabilities = self.states_and_probabilities[i][0]
+        
+            posible_states = states_and_probabilities[0]
+            probabilities_of_action = states_and_probabilities[1]
 
-            # Check if its outside the maze
-            if not in_maze:
-                rew += self.gamma ** (number_states - i) * self.reward_for_leaving_limits
-                in_maze = True
-            else:
-                rew += self.gamma ** (number_states - i) * self.environment[state_row][state_col]
-
+            reward_to_sum = 0
+            for j in range(len(posible_states)): # Since posible_states and probabilities_of_action have the same length, its the same which we use
+                if self.is_inside_maze(posible_states[j]):
+                    reward_to_sum += probabilities_of_action[j] * (self.environment[posible_states[j][0], posible_states[j][1]] + self.gamma ** (number_of_states - i) * self.state_values[posible_states[j][0], posible_states[j][1]])
+                else:
+                    reward_to_sum += probabilities_of_action[j] * self.reward_for_leaving_limits
+                
+            rew += reward_to_sum
+    
         self.state_values[self.initial_coords[0], self.initial_coords[1]] = rew
 
     def change_state(self, exploration_prob):
@@ -185,7 +192,7 @@ class Agent:
 
                 # Save the current state in history list
                 self.states_history.append([self.actual_coords_y, self.actual_coords_x])
-                
+
                 # Calculate distances
                 distances = []
 
@@ -196,12 +203,25 @@ class Agent:
                 next_action_index = self.choose_action(next_states_available, distances.index(min(distances)), random.random())
 
                 next_state = next_states_available[next_action_index]
+                
+                # print(f"{next_state = }")
+                # print(f"{self.initial_coords = }")
 
                 if not self.is_inside_maze(next_state):
                     
-                    self.update_state_values(False)
+                    self.update_state_values()
 
                     self.states_history = []
+
+                    # Select next state which has the biggest state value with some probability
+                    new_state = self.change_state(random.random())
+
+                    while not self.is_inside_maze(new_state):
+                        new_state = self.change_state(random.random())
+
+                    self.initial_coords = new_state[0], new_state[1]
+                        
+                    self.actual_coords_y, self.actual_coords_x = self.initial_coords
                     
                     game_state = -1
                 
@@ -211,7 +231,7 @@ class Agent:
                     self.actual_coords_x = next_state[1]
 
                     if self.arrived_final((self.actual_coords_y, self.actual_coords_x)):
-                        self.update_state_values(True)
+                        self.update_state_values()
                         
                         # Select next state which has the biggest state value with some probability
                         new_state = self.change_state(random.random())
@@ -219,10 +239,9 @@ class Agent:
                         while not self.is_inside_maze(new_state):
                             new_state = self.change_state(random.random())
 
-                            self.initial_coords = new_state[0], new_state[1]
+                        self.initial_coords = new_state[0], new_state[1]
                         
-                        self.actual_coords_y = new_state[0]
-                        self.actual_coords_x = new_state[1]
+                        self.actual_coords_y, self.actual_coords_x = self.initial_coords
 
                         game_state = 1
 
