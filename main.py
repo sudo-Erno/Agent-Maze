@@ -25,9 +25,9 @@ agent.set_environmet(environment, location_blocks, final)
 game_state = False
 state_actions = 0
 
-game_state, state_actions, path = agent.move_throught_environment(10)
+game_state, state_actions, path = agent.move_throught_environment(50)
 
-print("\n")
-print(path)
+# print("\n")
+# print(path)
 print("\n")
 print(state_actions)

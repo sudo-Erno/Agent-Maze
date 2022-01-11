@@ -20,6 +20,7 @@ class Maze:
         self.reward_per_step = reward_per_step
 
         self.maze[final[0], final[1]] = reward_reaching_final
+        self.maze[initial[0], initial[1]] = 0
 
         return self.maze
     

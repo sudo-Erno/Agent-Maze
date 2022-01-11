@@ -40,6 +40,7 @@ class Agent:
     def set_environmet(self, env, location_blocks, final):
         # Save the Maze
         self.environment = env
+
         self.location_blocks = location_blocks
         
         # Save the coordinates of the exit
@@ -135,7 +136,8 @@ class Agent:
             reward_to_sum = 0
             for j in range(len(posible_states)): # Since posible_states and probabilities_of_action have the same length, its the same which we use
                 if self.is_inside_maze(posible_states[j]):
-                    reward_to_sum += probabilities_of_action[j] * (self.environment[posible_states[j][0], posible_states[j][1]] + self.gamma ** (number_of_states - i) * self.state_values[posible_states[j][0], posible_states[j][1]])
+                    distance_rew, _ = self.instant_reward(posible_states[j])
+                    reward_to_sum += probabilities_of_action[j] * (self.environment[posible_states[j][0], posible_states[j][1]] + distance_rew + self.gamma ** (number_of_states - i) * self.state_values[posible_states[j][0], posible_states[j][1]])
                 else:
                     reward_to_sum += probabilities_of_action[j] * self.reward_for_leaving_limits
                 
@@ -240,8 +242,15 @@ class Agent:
                             new_state = self.change_state(random.random())
 
                         self.initial_coords = new_state[0], new_state[1]
+
+                        if self.arrived_final(self.initial_coords):
+                            # self.actual_coords_y = random.randint(0, len(self.actions.keys()))
+                            # self.actual_coords_x = random.randint(0, len(self.actions.keys()))
+                            self.actual_coords_y = 0
+                            self.actual_coords_x = 0
                         
-                        self.actual_coords_y, self.actual_coords_x = self.initial_coords
+                        else:
+                            self.actual_coords_y, self.actual_coords_x = self.initial_coords
 
                         game_state = 1
 
