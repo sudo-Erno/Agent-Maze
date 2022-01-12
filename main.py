@@ -27,9 +27,3 @@ position_state = False
 
 for i in range(5):
     position_state = agent.move_throught_environment()
-
-
-# for i in range(1000):
-#     while not position_state:
-#         position_state = agent.move_throught_environment()
-#     agent.set_position(y0, x0)

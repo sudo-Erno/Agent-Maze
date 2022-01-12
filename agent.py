@@ -25,8 +25,6 @@ class Agent:
 
         self.reward_for_leaving_limits = reward_for_leaving_limits
 
-        # Initialize the reward
-        self.reward = 0
     
     def set_position(self, y, x):
         self.actual_coords_y = y
@@ -40,8 +38,7 @@ class Agent:
         # Save the coordinates of the exit
         self.final = final
 
-        self.QValues = np.zeros((len(self.actions), self.environment.shape[0], self.environment.shape[1]))
-        self.Q_action_state = self.QValues
+        self.QValues = np.zeros_like(self.environment)
 
     def instant_reward(self, new_coordinates):
         d = ((new_coordinates[0] - self.final[0])**2 + (new_coordinates[1] - self.final[1])**2)**0.5
@@ -58,55 +55,52 @@ class Agent:
             return False
 
         return True
+    
+    def arrived_final(self, state):
+        if state[0] == self.final[0] and state[1] == self.final[1]:
+            return True
 
-    def action_probability(self, next_states, min_distance_index, b_prob=70, s_prob=10):
+        return False
+
+    def choose_action(self, next_states, min_distance_index, exploration_prob, b_prob=0.7):
         """
-        Returns a list with the probability of each action
+        Returns list with the probabilities of the executing the actions
         """
-        states_possibilities = []
 
-        for i in range(len(next_states)):
+        if exploration_prob < self.epsilon:
+            # Choose the one with highest state value
+            next_states_max_value = 0
+            next_states_max_index = 1
+
+            for i in range(len(next_states)):
+                state_value = self.QValues[next_states[i][0], next_states[i][1]]
+
+                if self.is_inside_maze(next_states[i]) and state_value >= next_states_max_value:
+                    next_states_max_value = state_value
+                    next_states_max_index = i
             
-            state = list(self.actions.keys())
-            state = state[i]
-
-            if i == min_distance_index:
-                states_possibilities.append(b_prob / 100)
+            return next_states_max_index
             
-            else:
-                states_possibilities.append(s_prob / 100)
-
-        return states_possibilities
+        else:
+            return random.randint(0, len(self.actions.keys()) - 1)
         
-    def update_state_values(self, next_states, probabilities):
+    def update_state_values(self, actual_state, next_state):
 
-        for i in range(len(probabilities)):
-            next_state = next_states[i]
-            
-            # Check if the next state is outside the maze...
-            inside_maze = self.is_inside_maze(next_state)
-            
-            if inside_maze:
-                self.QValues[i, self.actual_coords_y, self.actual_coords_x] = probabilities[i] * (self.environment[next_state[0], next_state[1]] + self.gamma * self.QValues[i, next_state[0], next_state[1]])
-            else:
-                self.QValues[i, self.actual_coords_y, self.actual_coords_x] = probabilities[i] * (self.reward_for_leaving_limits + self.gamma * self.QValues[i, next_state[0], next_state[1]])
-
-    def update_state_actions_values(self, next_states, probabilities):
+        inside_maze = self.is_inside_maze(next_state)
         
-        max_probability_action_index = probabilities.index(max(probabilities))
-        
-        # Moves to the state which it's values is the max of all options
-        self.actual_coords_y = next_states[max_probability_action_index][0]
-        self.actual_coords_x = next_states[max_probability_action_index][1]
+        if inside_maze:
+            self.QValues[actual_state[0], actual_state[1]] = (1 - self.learning_rate) * self.QValues[actual_state[0], actual_state[1]] + self.gamma * self.QValues[next_state[0], next_state[1]]
+        else:
+            self.QValues[actual_state[0], actual_state[1]] = (1 - self.learning_rate) * self.QValues[actual_state[0], actual_state[1]] + self.gamma * self.reward_for_leaving_limits
 
     def move_throught_environment(self):
         """
         Returns 1 if it has arrived to destiny, 0 if it has not arrived and -1 if it has left the maze.
         """
-        get_to_final = False
+        game_state = 0
         
         # Check the values on the QValue table for next action
-        next_states = [
+        posible_next_states = [
             [self.actual_coords_y - 1, self.actual_coords_x], # UP
             [self.actual_coords_y, self.actual_coords_x + 1], # RIGHT
             [self.actual_coords_y + 1, self.actual_coords_x], # DOWN
@@ -115,23 +109,26 @@ class Agent:
 
         # Calculate distances
         distances = []
-        for state in next_states:
+        for state in posible_next_states:
             _, dis = self.instant_reward(state)
             distances.append(dis)
 
-        actions_probabilities = self.action_probability(next_states, distances.index(min(distances))) # Returns list with the probability of moving to different states.
+        # action = self.choose_action(posible_next_states, distances.index(min(distances)), 0.1)
+        action = self.choose_action(posible_next_states, distances.index(min(distances)), random.random())
 
-        self.update_state_values(next_states, actions_probabilities)
+        next_state = posible_next_states[action]
 
-        self.update_state_actions_values(next_states, actions_probabilities)
+        while not self.is_inside_maze(next_state):
+            next_state = posible_next_states[action]
 
-        # Check if it has arrived to the end
-        if self.actual_coords_y == self.final[0] and self.actual_coords_x == self.final[1]:
-            get_to_final = True
-        
+        self.update_state_values((self.actual_coords_y, self.actual_coords_x), next_state)
 
-        print("\tQ-VALUES\t")
+        self.actual_coords_y = next_state[0]
+        self.actual_coords_x = next_state[1]
+
+        print(f"{self.actual_coords_y = } {self.actual_coords_x = }")
+
         print(self.QValues)
-        print("\t\t")
+        print("\n")
 
-        return get_to_final
+        return game_state
