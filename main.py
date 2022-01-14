@@ -11,18 +11,18 @@ reward_per_step = -0.04
 reward_reaching_final = 1.0
 
 # Agent parameters
-gamma = 0.95
+discount_rate = 0.95
 
 maze = Maze()
 
 environment = maze.create_maze(final, rows, cols, reward_per_step=reward_per_step, reward_reaching_final=reward_reaching_final)
 location_blocks = maze.generate_blocks(2)
 
-agent = Agent(x = 0, y = 0, gamma = gamma)
+agent = Agent(x = 0, y = 0, discount_rate = discount_rate)
 agent.set_environmet(environment, location_blocks, final)
 
 position_state = False
 
-game_state, qvalues = agent.move_throught_environment(5)
+game_state, qvalues = agent.move_throught_environment(100)
 
 print(qvalues)
